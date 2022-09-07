@@ -1,24 +1,19 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-# from app.routers import authentication
+from app.routers import authentication
 from app.database import Database
 from app.config import settings
-
+from starlette.middleware.cors import CORSMiddleware
 
 # Create fastAPI instance
 app = FastAPI()
-
-origins = [
-    "http://localhost:3000",
-    "http://10.0.0.240:3000"
-]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+	allow_headers=["*"],
 )
+
 
 # Connect to the database
 @app.on_event("startup")
@@ -35,3 +30,5 @@ async def startup_event():
 async def shutdown_event():
     Database.disconnect()
     print("Database Connection closed")
+
+app.include_router(authentication.router)

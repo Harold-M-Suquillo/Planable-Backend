@@ -1,20 +1,4 @@
 CREATE TABLE users(
-    id SERIAL PRIMARY KEY NOT NULL,
-    email character varying NOT NULL UNIQUE,
-    password character varying NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
-)
-
-INSERT INTO users(email,password) VALUES('test@gmail.com', 12345);
- 
-
-
-
-
-
-
-
-CREATE TABLE users(
     username VARCHAR(15) PRIMARY KEY NOT NULL,
     email VARCHAR(20) NOT NULL UNIQUE,
     password VARCHAR(20) NOT NULL,
@@ -23,12 +7,14 @@ CREATE TABLE users(
         CHECK (role='User' or role='Demo' or role='Admin')
 );
 
+
 CREATE TABLE projects(
     id SERIAL PRIMARY KEY NOT NULL,
     name VARCHAR(40) NOT NULL,
     description VARCHAR(125) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
 
 CREATE TABLE works_on(
     username VARCHAR(15) NOT NULL,
@@ -44,6 +30,7 @@ CREATE TABLE works_on(
         FOREIGN KEY(project_id) REFERENCES projects(id)
             ON DELETE CASCADE
 );
+
 
 CREATE TABLE tickets(
     id SERIAL PRIMARY KEY NOT NULL,
@@ -63,9 +50,10 @@ CREATE TABLE tickets(
             ON DELETE CASCADE,
 
     CONSTRAINT tickets_projects_fk
-        FOREIGN KEY(project) REFERENCES projects(project_id)
+        FOREIGN KEY(project) REFERENCES projects(id)
             ON DELETE CASCADE
 );
+
 
 CREATE TABLE ticket_comments(
     ticket_id INTEGER PRIMARY KEY NOT NULL,
@@ -81,3 +69,4 @@ CREATE TABLE ticket_comments(
         FOREIGN KEY(commentor) REFERENCES users(username)
             ON DELETE CASCADE
 );
+

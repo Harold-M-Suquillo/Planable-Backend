@@ -41,31 +41,39 @@ def test_token(current_user: dict = Depends(oauth2.get_current_user)):
 
 
 
-# The user will sign up
+# The user will sign up (By default authorization is set to User)
 @router.post('/signup',  status_code=status.HTTP_201_CREATED)
 def signup(user: schemas.SignUpRequest):
     try:
         # Hash the password
         hashed_password = utils.hash(user.password)
-        # Try to insert email/password into database
-        Database.cursor.execute(""" INSERT INTO users(email, password) VALUES(%s, %s) RETURNING *; """, (user.email, hashed_password))
+        # Try to insert into database
+        Database.cursor.execute(
+            """ INSERT INTO users(username, email, password, role) 
+                VALUES(%s ,%s, %s, 'User') 
+                RETURNING role, username; 
+            """, 
+            (user.username, user.email, hashed_password)
+        )
         new_user = Database.cursor.fetchone()
         Database.conn.commit()
 
         # Create and return access token
-        access_token = oauth2.create_access_token({"user_id": new_user['id']})
+        access_token = oauth2.create_access_token({"auth": new_user['role']})
         
-        data = {
-            "id": new_user['id'],
+        return {
+            "username": new_user['username'],
             "access_token": access_token
         }
-        return data
 
-    except utils.UNIQUE_VIOLATION:
+
+    except utils.UNIQUE_VIOLATION as error:
         # If request fails we have to rollback the failed transaction and return error
+        # Find the key that caused the violation
+        key = error.pgerror
         Database.conn.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail=f"email [{user.email}] is already linked to an account")
+                            detail=[f"{key[key.find('(')+1 : key.find(')')]} is already linked to an account"])
 
 
 

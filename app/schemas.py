@@ -1,6 +1,6 @@
 from typing import Optional
-from pydantic import BaseModel, EmailStr
-from datetime import datetime
+from pydantic import BaseModel, EmailStr, constr
+
 
 # ----- Authentication -----
 
@@ -17,7 +17,8 @@ class SignUpResponse(BaseModel):
 # Request - signup
 class SignUpRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: constr(regex=r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", max_length=15)
+    username: constr(min_length=3)
 
 # Test token
 class TokenData(BaseModel):

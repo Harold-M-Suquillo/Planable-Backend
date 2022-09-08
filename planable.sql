@@ -1,7 +1,7 @@
 CREATE TABLE users(
     username VARCHAR(15) PRIMARY KEY NOT NULL,
     email VARCHAR(20) NOT NULL UNIQUE,
-    password VARCHAR(20) NOT NULL,
+    password VARCHAR(60) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     role VARCHAR(10) NOT NULL
         CHECK (role='User' or role='Demo' or role='Admin')

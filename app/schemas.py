@@ -22,7 +22,8 @@ class SignUpRequest(BaseModel):
 
 # Test token
 class TokenData(BaseModel):
-    id: Optional[str] = None
+    auth: str
+    usr: str
 
 
 

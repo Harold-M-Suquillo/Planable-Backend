@@ -1,5 +1,3 @@
-from email.policy import HTTP
-from urllib import response
 from fastapi import APIRouter, status, HTTPException, Depends
 from app.database import Database
 from app import schemas, utils, oauth2
@@ -12,8 +10,9 @@ router = APIRouter( tags=['Authentication'] )
 @router.post('/login', response_model=schemas.Token)
 def login(user_credentials: OAuth2PasswordRequestForm = Depends()):
 
+
     # Query the database for user info 
-    Database.cursor.execute(""" SELECT * FROM users WHERE email=%s; """, (user_credentials.username,))
+    Database.cursor.execute(""" SELECT role, password, username FROM users WHERE email=%s; """, (user_credentials.username,))
     fetched_data = Database.cursor.fetchone()
 
     # Email not in the database
@@ -27,7 +26,7 @@ def login(user_credentials: OAuth2PasswordRequestForm = Depends()):
                             detail="invalid crentials")
 
     # Credentials valid -> Create and return access token
-    access_token = oauth2.create_access_token({"user_id": fetched_data['id']})
+    access_token = oauth2.create_access_token({"auth": fetched_data['role'], "usr": fetched_data['username']})
     return {
         "access_token": access_token,
         "token_type": "bearer"
@@ -47,10 +46,10 @@ def signup(user: schemas.SignUpRequest):
     try:
         # Hash the password
         hashed_password = utils.hash(user.password)
-        # Try to insert into database
+        # Try to insert into database -> by default make a auth level 'User'
         Database.cursor.execute(
             """ INSERT INTO users(username, email, password, role) 
-                VALUES(%s ,%s, %s, 'User') 
+                VALUES(%s ,%s, %s, 'User')
                 RETURNING role, username; 
             """, 
             (user.username, user.email, hashed_password)
@@ -58,14 +57,13 @@ def signup(user: schemas.SignUpRequest):
         new_user = Database.cursor.fetchone()
         Database.conn.commit()
 
-        # Create and return access token
-        access_token = oauth2.create_access_token({"auth": new_user['role']})
+        # Create and return access token with id and auth 
+        access_token = oauth2.create_access_token({"auth": new_user['role'], "usr": new_user['username']})
         
         return {
             "username": new_user['username'],
             "access_token": access_token
         }
-
 
     except utils.UNIQUE_VIOLATION as error:
         # If request fails we have to rollback the failed transaction and return error

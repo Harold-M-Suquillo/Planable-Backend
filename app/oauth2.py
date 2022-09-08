@@ -33,12 +33,13 @@ def create_access_token(data: dict):
 def verify_access_token(token: str, credentials_exception):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        id: str = payload.get('user_id')
-        auth: str = payload.get('authorization')
+        auth: str = payload.get('auth')
+        usr: str = payload.get('usr')
 
-        if not id or not auth:
+        if not auth or not usr:
             raise credentials_exception
-        token_data = schemas.TokenData(id=id)
+        token_data = schemas.TokenData(auth=auth, usr=usr)
+
     except JWTError:
         raise credentials_exception
     return token_data
@@ -50,10 +51,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
                             detail=f"Could not validate Credentials", headers={"WWW-Authenticate": "Bearer"})
 
     token = verify_access_token(token, credentials_exception)
-    with Database.conn.cursor() as cursor:
-        cursor.execute(""" SELECT id FROM users where id=%s; """, (token.id,))
-        fetched_user = cursor.fetchone();
-    return { "id": fetched_user["id"]}
+    return token
 
 
 

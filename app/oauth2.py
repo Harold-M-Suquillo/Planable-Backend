@@ -1,7 +1,7 @@
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from fastapi import Depends, status, HTTPException
-from app import schemas
+from app import schemas, utils
 from fastapi.security import OAuth2PasswordBearer
 from app.database import Database
 from app.config import settings
@@ -44,14 +44,20 @@ def verify_access_token(token: str, credentials_exception):
         raise credentials_exception
     return token_data
 
-# Verifies that the user 
+# Verifies that the users JWT Token
 def get_current_user(token: str = Depends(oauth2_scheme)):
     # credential exception 
     credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail=f"Could not validate Credentials", headers={"WWW-Authenticate": "Bearer"})
+                            detail=[f"Could not validate Credentials"], headers={"WWW-Authenticate": "Bearer"})
 
+    # Verufy that the token is valid and return auth level and username
     token = verify_access_token(token, credentials_exception)
     return token
 
-
+# Verifies the users access token and restricts demo Users
+def get_current_user_restrict_demo_user(current_user: dict = Depends(get_current_user)):
+    if current_user.auth == utils.DEMO:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=["Demo user is unauthorized"])
+    return current_user
 

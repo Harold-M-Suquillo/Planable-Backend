@@ -2,7 +2,7 @@ CREATE TABLE users(
     username VARCHAR(15) PRIMARY KEY NOT NULL,
     email VARCHAR(20) NOT NULL UNIQUE,
     password VARCHAR(60) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at DATE NOT NULL DEFAULT NOW(),
     role VARCHAR(10) NOT NULL
         CHECK (role='User' or role='Demo' or role='Admin')
 );
@@ -12,7 +12,7 @@ CREATE TABLE projects(
     id SERIAL PRIMARY KEY NOT NULL,
     name VARCHAR(40) NOT NULL,
     description VARCHAR(125) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    created_at DATE NOT NULL DEFAULT NOW()
 );
 
 
@@ -28,7 +28,9 @@ CREATE TABLE works_on(
 
     CONSTRAINT works_projects_fk
         FOREIGN KEY(project_id) REFERENCES projects(id)
-            ON DELETE CASCADE
+            ON DELETE CASCADE,
+
+    PRIMARY KEY(username, project_id)
 );
 
 
@@ -43,7 +45,7 @@ CREATE TABLE tickets(
     project INTEGER NOT NULL,
     status VARCHAR(30) NOT NULL
         CHECK (status = 'New' or status = 'Open' or status = 'In Progress' or  status = 'Additional Info Required'),
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 
     CONSTRAINT tickets_users_fk
         FOREIGN KEY(assigned_user) REFERENCES users(username)
@@ -59,7 +61,7 @@ CREATE TABLE ticket_comments(
     ticket_id INTEGER PRIMARY KEY NOT NULL,
     message VARCHAR(250) NOT NULL,
     commentor VARCHAR(15) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 
     CONSTRAINT comments_tickets_fk
         FOREIGN KEY(ticket_id) REFERENCES tickets(id)

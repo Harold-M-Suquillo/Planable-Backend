@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, status
-from app.routers import authentication
+from app.routers import authentication, projects, tickets
 from app.database import Database
 from app.config import settings
 from starlette.middleware.cors import CORSMiddleware
@@ -51,4 +51,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
+# Add paths to app
 app.include_router(authentication.router)
+app.include_router(projects.router)
+app.include_router(tickets.router)

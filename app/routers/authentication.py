@@ -18,12 +18,12 @@ def login(user_credentials: OAuth2PasswordRequestForm = Depends()):
     # Email not in the database
     if not fetched_data:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="invalid credentials")
+                            detail=["invalid credentials"])
 
     # Password not valid
     if not utils.verify(user_credentials.password, fetched_data['password']):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="invalid crentials")
+                            detail=["invalid crentials"])
 
     # Credentials valid -> Create and return access token
     access_token = oauth2.create_access_token({"auth": fetched_data['role'], "usr": fetched_data['username']})
@@ -50,7 +50,7 @@ def signup(user: schemas.SignUpRequest):
         Database.cursor.execute(
             """ INSERT INTO users(username, email, password, role) 
                 VALUES(%s ,%s, %s, 'User')
-                RETURNING role, username; 
+                RETURNING role, username
             """, 
             (user.username, user.email, hashed_password)
         )

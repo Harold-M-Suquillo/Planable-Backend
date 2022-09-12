@@ -1,8 +1,10 @@
 from urllib import response
 from fastapi import APIRouter, status, HTTPException, Depends
-from app import schemas, utils, oauth2
+from app import utils
 from typing import List, Optional, Literal
-from app.database import Database
+from app.Database.database import Database
+from app.Schemas import schemas
+from app.Core import oauth2
 
 router = APIRouter(
     prefix='/projects',
@@ -25,7 +27,7 @@ def get_projects(
     Database.cursor.execute(
         """ SELECT p.id, p.name, p.description, p.created_at
             FROM works_on AS w INNER JOIN projects AS p 
-                on w.project_id = p.id
+                ON w.project_id = p.id
             WHERE p.name LIKE %s AND w.username=%s AND w.role=%s
             ORDER BY p.created_at DESC
             OFFSET %s
@@ -214,7 +216,7 @@ def delete_project(id: str, current_user: dict = Depends(oauth2.get_current_user
 
 
 # Remove a user from a project
-@router.delete('/user', status_code=status.HTTP_204_NO_CONTENT)
+@router.delete('/users', status_code=status.HTTP_204_NO_CONTENT)
 def delete_user_from_project(remove_user: schemas.AddUserToProject , current_user: dict = Depends(oauth2.get_current_user_restrict_demo_user)):
     # Query for the project
     Database.cursor.execute(

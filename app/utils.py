@@ -1,7 +1,7 @@
 from passlib.context import CryptContext
 from psycopg2 import errors
 from fastapi import status, HTTPException, Depends
-from app import oauth2
+from app.Core import oauth2
 
 # Unique Violation
 UNIQUE_VIOLATION = errors.lookup('23505')

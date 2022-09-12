@@ -1,11 +1,12 @@
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from fastapi import Depends, status, HTTPException
-from app import schemas, utils
+from app import utils
 from fastapi.security import OAuth2PasswordBearer
-from app.database import Database
+from app.Database.database import Database
 from app.config import settings
 import time
+from app.Schemas.token import TokenPayload
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 
@@ -34,11 +35,11 @@ def verify_access_token(token: str, credentials_exception):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         auth: str = payload.get('auth')
-        usr: str = payload.get('usr')
+        user: str = payload.get('user')
 
-        if not auth or not usr:
+        if not auth or not user:
             raise credentials_exception
-        token_data = schemas.TokenData(auth=auth, usr=usr)
+        token_data = TokenPayload(auth=auth, user=user)
 
     except JWTError:
         raise credentials_exception
@@ -50,7 +51,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail=[f"Could not validate Credentials"], headers={"WWW-Authenticate": "Bearer"})
 
-    # Verufy that the token is valid and return auth level and username
+    # Verify that the token is valid
     token = verify_access_token(token, credentials_exception)
     return token
 

@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, status
-from app.routers import authentication, projects, tickets
-from app.database import Database
+from app.Routers import authentication, projects, tickets
+from app.Database.database import Database
 from app.config import settings
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -20,7 +20,7 @@ app.add_middleware(
 
 # Connect to the database
 @app.on_event("startup")
-async def startup_event():
+def startup_event():
     Database.connect(
         settings.database_hostname,
         settings.database_name,
@@ -30,7 +30,7 @@ async def startup_event():
 
 # Close Database Connection
 @app.on_event("shutdown")
-async def shutdown_event():
+def shutdown_event():
     Database.disconnect()
     print("Database Connection closed")
 
@@ -51,7 +51,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
+# Route path used to test health of app
+@app.get("/")
+def root():
+    return {"msg": "Hello World"}
+
+
 # Add paths to app
 app.include_router(authentication.router)
 app.include_router(projects.router)
 app.include_router(tickets.router)
+

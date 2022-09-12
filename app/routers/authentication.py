@@ -1,13 +1,12 @@
 from fastapi import APIRouter, status, HTTPException, Depends
-from app.database import Database
-from app import schemas, utils, oauth2
+from app.Database.database import Database
+from app import utils
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
-from app import schemas
-
+from app.Schemas import token
+from app.Core import oauth2
 router = APIRouter( tags=['Authentication'] )
 
-
-@router.post('/login', response_model=schemas.Token)
+@router.post('/login', response_model=token.Token)
 def login(user_credentials: OAuth2PasswordRequestForm = Depends()):
 
 
@@ -23,26 +22,26 @@ def login(user_credentials: OAuth2PasswordRequestForm = Depends()):
     # Password not valid
     if not utils.verify(user_credentials.password, fetched_data['password']):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail=["invalid crentials"])
+                            detail=["invalid credentials"])
 
     # Credentials valid -> Create and return access token
-    access_token = oauth2.create_access_token({"auth": fetched_data['role'], "usr": fetched_data['username']})
+    access_token = oauth2.create_access_token({"auth": fetched_data['role'], "user": fetched_data['username']})
     return {
         "access_token": access_token,
         "token_type": "bearer"
     }
 
 # Tests to see if the token is still valid
-@router.post('/login/test-token')
+@router.post('/login/test-token', status_code=status.HTTP_204_NO_CONTENT)
 def test_token(current_user: dict = Depends(oauth2.get_current_user)):
-    return current_user
+    pass
 
 
 
 
 # The user will sign up (By default authorization is set to User)
-@router.post('/signup',  status_code=status.HTTP_201_CREATED)
-def signup(user: schemas.SignUpRequest):
+@router.post('/signup', status_code=status.HTTP_201_CREATED, response_model=token.Token)
+def signup(user: token.SignUpRequest):
     try:
         # Hash the password
         hashed_password = utils.hash(user.password)
@@ -58,12 +57,13 @@ def signup(user: schemas.SignUpRequest):
         Database.conn.commit()
 
         # Create and return access token with id and auth 
-        access_token = oauth2.create_access_token({"auth": new_user['role'], "usr": new_user['username']})
-        
+        access_token = oauth2.create_access_token({"auth": new_user['role'], "user": new_user['username']})
+
         return {
-            "username": new_user['username'],
-            "access_token": access_token
+            "access_token": access_token,
+            "token_type": "bearer"
         }
+
 
     except utils.UNIQUE_VIOLATION as error:
         # If request fails we have to rollback the failed transaction and return error

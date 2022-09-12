@@ -5,6 +5,7 @@ from typing import List, Optional, Literal
 from app.Database.database import Database
 from app.Schemas import schemas
 from app.Core import oauth2
+from app.Schemas import project
 
 router = APIRouter(
     prefix='/projects',
@@ -16,7 +17,7 @@ router = APIRouter(
 # Filter between projects you manage and ones you are a developer
 # Filter the number of project you want
 # filter by projects names that contain a keyword
-@router.get('/', response_model=List[schemas.projectResponse])
+@router.get('/', response_model=List[project.ProjectResponse])
 def get_projects(
     current_user: dict = Depends(oauth2.get_current_user),
     limit: int = 10,
@@ -40,7 +41,7 @@ def get_projects(
 
 
 # Get a project by id
-@router.get('/{id}', response_model=schemas.projectResponse) # -> DONE
+@router.get('/{id}', response_model=project.ProjectResponse) # -> DONE
 def get_project(id: str, current_user: dict = Depends(oauth2.get_current_user)):
     #1) Do they work on the Project and project exist? Yes -> Allow / No -> raise exception
     Database.cursor.execute(
@@ -54,7 +55,7 @@ def get_project(id: str, current_user: dict = Depends(oauth2.get_current_user)):
     project_id = Database.cursor.fetchone()
     if not project_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"project with id {id} does not exist or you don't have access")
+            detail=[f"project with id {id} does not exist or you don't have access"])
 
 
     # 2) If they work on the project return project data
@@ -72,8 +73,8 @@ def get_project(id: str, current_user: dict = Depends(oauth2.get_current_user)):
 
 # Create a new project
 # The user creating the project is the Project Manager -> DONE
-@router.post('/', response_model=schemas.projectResponse)
-def create_project(project_data: schemas.project, current_user: dict = Depends(oauth2.get_current_user_restrict_demo_user)):
+@router.post('/', response_model=project.ProjectResponse, status_code=status.HTTP_201_CREATED)
+def create_project(project_data: project.Project, current_user: dict = Depends(oauth2.get_current_user_restrict_demo_user)):
     # 1) Add the new project to the database
     Database.cursor.execute(
         """
@@ -93,15 +94,14 @@ def create_project(project_data: schemas.project, current_user: dict = Depends(o
         """,
         (current_user.usr, project_info['id'], utils.PROJECT_MANAGER)
     )
-
     Database.conn.commit()
     return project_info
 
 
 
 # Update a project -> Only an admin is able to update a project
-@router.put('/{id}')
-def update_project(id: str, project: schemas.project, current_user: dict = Depends(oauth2.get_current_user_restrict_demo_user)):
+@router.put('/{id}', response_model=project.ProjectResponse)
+def update_project(id: str, project: project.Project, current_user: dict = Depends(oauth2.get_current_user_restrict_demo_user)):
     # 1) Check if the user is the project manager YES -> Allow / NO -> Raise Exception
     Database.cursor.execute(
         """
@@ -136,7 +136,7 @@ def update_project(id: str, project: schemas.project, current_user: dict = Depen
 
 # Add a user to a project -> Only an admin is able to update a project -> DONE
 @router.post('/users', status_code=status.HTTP_201_CREATED)
-def add_user_from_project(data: schemas.AddUserToProject, current_user: dict = Depends(oauth2.get_current_user_restrict_demo_user)):
+def add_user_to_project(data: project.user_works_on, current_user: dict = Depends(oauth2.get_current_user_restrict_demo_user)):
     # Query for project and role
     Database.cursor.execute(
         """
@@ -217,7 +217,7 @@ def delete_project(id: str, current_user: dict = Depends(oauth2.get_current_user
 
 # Remove a user from a project
 @router.delete('/users', status_code=status.HTTP_204_NO_CONTENT)
-def delete_user_from_project(remove_user: schemas.AddUserToProject , current_user: dict = Depends(oauth2.get_current_user_restrict_demo_user)):
+def delete_user_from_project(remove_user: project.user_works_on , current_user: dict = Depends(oauth2.get_current_user_restrict_demo_user)):
     # Query for the project
     Database.cursor.execute(
         """

@@ -1,43 +1,4 @@
-
-from app.Database.database import Database
-from app.main import app
-import pytest
-from app.config import settings
-from fastapi.testclient import TestClient
 from app.Schemas import token
-
-# Fixture Connects to Test Database, Cleans Database before and after tests
-@pytest.fixture(scope="module")
-def client():
-    Database.connect(
-        settings.database_hostname,
-        settings.database_name,
-        settings.database_username,
-        settings.database_password)
-    Database.cursor.execute(
-        """ 
-        DELETE FROM users;
-        DELETE FROM projects;
-        DELETE FROM ticket_comments;
-        DELETE FROM works_on;
-        DELETE FROM tickets;
-        """
-    )
-    Database.conn.commit()
-    yield TestClient(app)
-    Database.cursor.execute(
-        """ 
-        DELETE FROM users;
-        DELETE FROM projects;
-        DELETE FROM ticket_comments;
-        DELETE FROM works_on;
-        DELETE FROM tickets;
-        """
-    )
-    Database.conn.commit()
-    Database.disconnect()
-
-
 
 def test_root(client):
     response = client.get('/')
@@ -72,46 +33,39 @@ def test_signup(client):
     
 
 
-def test_login(client):
+def test_login(client, test_user):
     # Invalid Email
     response = client.post(
         '/login',
-        data = {'username': 'user100@google.com', 'password': 'abcD#123'}
+        data = {'username': 'invalidEmail@gmail.com', 'password': test_user["password"]}
     )
-    
     error = token.error(**response.json())
     assert response.status_code == 403
+
 
     # Invalid Password
     response = client.post(
         '/login',
-        data = {'username': 'user10@google.com', 'password': '1234'}
+        data = {'username': test_user["username"], 'password': '1234'}
     )
-    
     error = token.error(**response.json())
     assert response.status_code == 403
+
 
     # Successful Login
     response = client.post(
         '/login',
-        data = {'username': 'user10@google.com', 'password': 'abcD#123'}
+        data = {'username': test_user["username"], 'password': test_user["password"]}
     )
-
     new_token = token.Token(**response.json())
     assert response.status_code == 200
 
 
-def test_token(client):
+def test_token(client, test_user):
     # Test a Valid Token
     response = client.post(
-        '/login',
-        data = {'username': 'user10@google.com', 'password': 'abcD#123'}
-    )
-    new_token = token.Token(**response.json())
-
-    response = client.post(
         '/login/test-token',
-        headers = { "Authorization": f"Bearer {new_token.access_token}" }
+        headers = { "Authorization": f"Bearer {test_user['access_token']}" }
     )
     assert response.status_code == 204
 

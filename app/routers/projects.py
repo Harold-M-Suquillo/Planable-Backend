@@ -1,3 +1,4 @@
+from email.policy import HTTP
 from urllib import response
 from fastapi import APIRouter, status, HTTPException, Depends
 from app import utils
@@ -34,7 +35,7 @@ def get_projects(
             OFFSET %s
             LIMIT %s;
         """,
-        ('%'+search+'%', current_user.usr, role, skip, limit)
+        ('%'+search+'%', current_user.user, role, skip, limit)
     )
     projects = Database.cursor.fetchall()
     return projects
@@ -42,7 +43,7 @@ def get_projects(
 
 # Get a project by id
 @router.get('/{id}', response_model=project.ProjectResponse) # -> DONE
-def get_project(id: str, current_user: dict = Depends(oauth2.get_current_user)):
+def get_project(id: int, current_user: dict = Depends(oauth2.get_current_user)):
     #1) Do they work on the Project and project exist? Yes -> Allow / No -> raise exception
     Database.cursor.execute(
         """ 
@@ -50,7 +51,7 @@ def get_project(id: str, current_user: dict = Depends(oauth2.get_current_user)):
             FROM works_on
             WHERE project_id=%s AND username=%s;
         """, 
-        (id, current_user.usr)
+        (id, current_user.user)
     )
     project_id = Database.cursor.fetchone()
     if not project_id:
@@ -92,7 +93,7 @@ def create_project(project_data: project.Project, current_user: dict = Depends(o
             INSERT INTO works_on(username, project_id, role)
             VALUES(%s, %s, %s);
         """,
-        (current_user.usr, project_info['id'], utils.PROJECT_MANAGER)
+        (current_user.user, project_info['id'], utils.PROJECT_MANAGER)
     )
     Database.conn.commit()
     return project_info
@@ -109,7 +110,7 @@ def update_project(id: str, project: project.Project, current_user: dict = Depen
             FROM works_on
             WHERE project_id=%s AND username=%s;
         """,
-        (id, current_user.usr)
+        (id, current_user.user)
     )
     project_data = Database.cursor.fetchone()
     if not project_data:
@@ -125,7 +126,7 @@ def update_project(id: str, project: project.Project, current_user: dict = Depen
         """
             UPDATE projects
             SET name=%s, description=%s
-            RETURNING name, description;
+            RETURNING name, description, id, created_at;
         """,
         (project.name,project.description)
     )
@@ -135,8 +136,8 @@ def update_project(id: str, project: project.Project, current_user: dict = Depen
 
 
 # Add a user to a project -> Only an admin is able to update a project -> DONE
-@router.post('/users', status_code=status.HTTP_201_CREATED)
-def add_user_to_project(data: project.user_works_on, current_user: dict = Depends(oauth2.get_current_user_restrict_demo_user)):
+@router.post('/users', response_model=project.New_worker, status_code=status.HTTP_201_CREATED)
+def add_user_to_project(data: project.User_works_on, current_user: dict = Depends(oauth2.get_current_user_restrict_demo_user)):
     # Query for project and role
     Database.cursor.execute(
         """
@@ -144,7 +145,7 @@ def add_user_to_project(data: project.user_works_on, current_user: dict = Depend
             FROM works_on
             WHERE project_id=%s AND username=%s;
         """,
-        (data.project_id, current_user.usr)
+        (data.project_id, current_user.user)
     )
     project_info = Database.cursor.fetchone()
 
@@ -162,10 +163,13 @@ def add_user_to_project(data: project.user_works_on, current_user: dict = Depend
             """
                 INSERT INTO works_on(username, project_id, role)
                 VALUES(%s, %s, %s)
+                RETURNING username AS user, project_id, role;
             """,
             (data.user, data.project_id, utils.DEVELOPER)
         )
         Database.conn.commit()
+        new_developer = Database.cursor.fetchone()
+        return new_developer
 
     except utils.UNIQUE_VIOLATION:
         Database.conn.rollback()
@@ -176,7 +180,43 @@ def add_user_to_project(data: project.user_works_on, current_user: dict = Depend
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
             detail=["User was not found"])
 
+# Remove a user from a project
+@router.delete('/{project_id}/users/{id}', status_code=status.HTTP_204_NO_CONTENT)
+def delete_user_from_project(project_id: str, id: str, current_user: dict = Depends(oauth2.get_current_user_restrict_demo_user)):
+    # Query for the project
+    Database.cursor.execute(
+        """
+            SELECT project_id, role
+            FROM works_on
+            WHERE project_id=%s AND username=%s;
+        """,
+        (project_id, current_user.user)
+    )
+    project_data = Database.cursor.fetchone()
+    # Does Project exist or connection
+    if not project_data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                detail=["Project Not Found"]) 
 
+    # Check if user has authorization
+    if project_data['role'] != utils.PROJECT_MANAGER:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=["Unauthorized to remove users"])
+
+    # Try to delete from the database
+    Database.cursor.execute(
+        """
+            DELETE FROM works_on
+            WHERE project_id=%s AND username=%s AND role=%s
+            RETURNING username;
+        """,
+        (project_id, id, utils.DEVELOPER)
+    )
+    Database.conn.commit()
+    deleted_user = Database.cursor.fetchone()
+    if not deleted_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                detail=["User not found"])
 
 # delete a project
 @router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
@@ -189,7 +229,7 @@ def delete_project(id: str, current_user: dict = Depends(oauth2.get_current_user
             FROM works_on 
             WHERE project_id=%s AND username=%s;
         """,
-        (id, current_user.usr)
+        (id, current_user.user)
     )
     project = Database.cursor.fetchone()
 
@@ -213,37 +253,3 @@ def delete_project(id: str, current_user: dict = Depends(oauth2.get_current_user
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=["Unauthorized to delete Project"])
-
-
-# Remove a user from a project
-@router.delete('/users', status_code=status.HTTP_204_NO_CONTENT)
-def delete_user_from_project(remove_user: project.user_works_on , current_user: dict = Depends(oauth2.get_current_user_restrict_demo_user)):
-    # Query for the project
-    Database.cursor.execute(
-        """
-            SELECT  project_id, role
-            FROM works_on
-            WHERE project_id=%s AND username=%s;
-        """,
-        (remove_user.project_id, current_user.usr)
-    )
-    project_data = Database.cursor.fetchone()
-    # Does Project exist or connection
-    if not project_data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                detail=["Project Not Found"]) 
-
-    # Check if user has auth 
-    if project_data['role'] != utils.PROJECT_MANAGER:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=["Unauthorized to remove users"])
-
-    # Try to delete from the database
-    Database.cursor.execute(
-        """
-            DELETE FROM works_on
-            WHERE project_id=%s AND username=%s AND role=%s;
-        """,
-        (remove_user.project_id, remove_user.user, utils.DEVELOPER)
-    )
-    Database.conn.commit()

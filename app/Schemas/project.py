@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import date
 
+
 # Create a project
 class Project(BaseModel):
     name: str
@@ -12,6 +13,10 @@ class ProjectResponse(Project):
     created_at: date
 
 # A user works on a project
-class user_works_on(BaseModel):
+class User_works_on(BaseModel):
     user: str
     project_id: str
+
+# New delveloper on a project
+class New_worker(User_works_on):
+    role: str

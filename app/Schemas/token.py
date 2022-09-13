@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, constr
 from typing import List
 
+
 # Token
 class Token(BaseModel):
     access_token: str
@@ -21,7 +22,3 @@ class SignUpRequest(BaseModel):
 class TokenPayload(BaseModel):
     auth: str
     user: str
-
-# Same for all errors raised through exceptions
-class error(BaseModel):
-    detail: List[str]

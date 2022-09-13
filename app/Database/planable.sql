@@ -1,6 +1,6 @@
 CREATE TABLE users(
     username VARCHAR(15) PRIMARY KEY NOT NULL,
-    email VARCHAR(20) NOT NULL UNIQUE,
+    email VARCHAR(35) NOT NULL UNIQUE,
     password VARCHAR(60) NOT NULL,
     created_at DATE NOT NULL DEFAULT NOW(),
     role VARCHAR(10) NOT NULL

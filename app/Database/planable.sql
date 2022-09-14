@@ -40,7 +40,7 @@ CREATE TABLE tickets(
     priority VARCHAR(10) NOT NULL
         CHECK (priority = 'None' or priority = 'Low' or priority = 'Medium' or priority = 'High'),
     assigned_user VARCHAR(20) NOT NULL,
-    Type VARCHAR(30) NOT NULL
+    type VARCHAR(30) NOT NULL
         CHECK (type = 'Bugs/Errors' or type = 'Feature Requests' or type = 'Other Comments' or type = 'Training/Document Requests'),
     project INTEGER NOT NULL,
     status VARCHAR(30) NOT NULL

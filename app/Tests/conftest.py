@@ -56,9 +56,9 @@ def client(connect):
 @pytest.fixture
 def test_user(client):
     user_data = {    
-        "email": "user10@google.com",
+        "email": "user1@google.com",
         "password": "Ab1#vv6666666", 
-        "username": "user10"
+        "username": "user1"
     }
     response = client.post('/signup', json=user_data)
     new_token = token.Token(**response.json())
@@ -74,9 +74,9 @@ def test_user(client):
 @pytest.fixture
 def test_user2(client):
     user_data = {    
-        "email": "user1@google.com",
+        "email": "user2@google.com",
         "password": "Ab1#vv6666666", 
-        "username": "user1"
+        "username": "user2"
     }
     response = client.post('/signup', json=user_data)
     new_token = token.Token(**response.json())
@@ -88,6 +88,7 @@ def test_user2(client):
         "access_token": new_token.access_token
     }
 
+# Fixture will create a third user
 @pytest.fixture
 def test_user3(client):
     user_data = {    
@@ -120,7 +121,7 @@ def auth_client(client, test_token):
     }
     return client
 
-# This fixture will create a projects and attach A Project manager
+# This fixture will create a projects and attach user as Project manager
 @pytest.fixture
 def create_projects(test_user):
     posts_data = [
@@ -149,7 +150,7 @@ def create_projects(test_user):
             """,
             (username, new_project['id'], utils.PROJECT_MANAGER)
         )
-    Database.conn.commit
+    Database.conn.commit()
     return project_id
 
 # Fixture will create 3 projects, add a Developer, and Project Manager
@@ -187,6 +188,62 @@ def create_projects2(test_user, test_user2):
                 test_user2['username'], new_project['id'], utils.DEVELOPER
             )
         )
-    Database.conn.commit
+    Database.conn.commit()
     return project_id
 
+# Fixture will create 3 project and assign test_user as the a Manager and test_user2 as a Developer
+@pytest.fixture
+def create_tickets(test_user, test_user2):
+    project_data = [
+        ("project 1", "project 1 Description"),
+        ("project 2", "project 2 Description"),
+        ("project 3", "project 3 Description")
+    ]
+    # Assigned User and project are missing
+    ticket_data = [
+        {"name": "Ticket 1", "priority": "Low", "type": "Bugs/Errors", "status": "Open"},
+        {"name": "Ticket 2", "priority": "None", "type": "Feature Requests", "status": "New"},
+        {"name": "Ticket 3", "priority": "High", "type": "Training/Document Requests", "status": "Additional Info Required"}
+    ]
+    projects_id = []
+    # Loop through project and add to DB also add works_on
+    for name, description in project_data:
+        Database.cursor.execute(
+            """
+                INSERT INTO projects(name, description)
+                VALUES(%s, %s)
+                RETURNING id;
+            """,
+            (name, description)
+        )
+        id = Database.cursor.fetchone()
+        projects_id.append(id['id'])
+
+    # Add a developer and Project Manager to the projects
+    for id in projects_id:
+        Database.cursor.execute(
+            """
+                INSERT INTO works_on(username, project_id, role)
+                VALUES (%s, %s, %s), (%s, %s, %s);
+            """,
+            (test_user['username'], id, utils.PROJECT_MANAGER, test_user2['username'], id, utils.DEVELOPER)
+        )
+    tickets_id = []
+    # Loop through the tickets and add to DB
+    for index, id in enumerate(projects_id):
+        Database.cursor.execute(
+            """
+                INSERT INTO tickets(name, priority, assigned_user, type, project, status)
+                VALUES(%s, %s, %s, %s, %s, %s);
+                RETURNING id;
+            """,
+            (ticket_data[index]["name"], ticket_data[index]["priority"], test_user2['username'],
+             ticket_data[index]["type"], id, ticket_data[index]["status"])
+        )
+        ticket_id = Database.cursor.fetchone()
+        tickets_id.append(ticket_id['id'])
+    Database.conn.commit()
+    return {
+        "tickets": tickets_id,
+        "projects": projects_id,
+    }

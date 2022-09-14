@@ -126,9 +126,10 @@ def update_project(id: str, project: project.Project, current_user: dict = Depen
         """
             UPDATE projects
             SET name=%s, description=%s
+            WHERE id=%s
             RETURNING name, description, id, created_at;
         """,
-        (project.name,project.description)
+        (project.name,project.description, project_data['project_id'])
     )
     Database.conn.commit()
     updated_project = Database.cursor.fetchone()

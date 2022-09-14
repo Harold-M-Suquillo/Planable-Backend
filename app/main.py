@@ -9,6 +9,7 @@ from fastapi.encoders import jsonable_encoder
 
 # Create fastAPI instance
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

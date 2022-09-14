@@ -5,20 +5,6 @@ from datetime import date, datetime
 
 
 
-# ----- Projects -----
-class project(BaseModel):
-    name: str
-    description: str
-
-# Response - get
-class projectResponse(project):
-    id: str
-    created_at: date
-
-class AddUserToProject(BaseModel):
-    user: str
-    project_id: str
-
 
 # ----- Tickets -----
 class Ticket(BaseModel):

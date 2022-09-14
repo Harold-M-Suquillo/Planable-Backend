@@ -9,6 +9,9 @@ UNIQUE_VIOLATION = errors.lookup('23505')
 # Foreign Key Violation
 FOREIGN_KEY_VIOLATION = errors.lookup('23503')
 
+# Check Violation
+CHECK_VIOLAION = errors.lookup('23514')
+
 # Project Manger Role
 PROJECT_MANAGER = 'Project Manager'
 
